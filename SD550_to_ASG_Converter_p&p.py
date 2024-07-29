@@ -47,8 +47,6 @@ import csv
 import os
 
 # Function to read values from CSV
-#Lines 17 & 20 will be the only lines we look at, this should be the lines
-#containing all Torque and Encoder values
 def read_values(file_path):
     with open(file_path, newline='', encoding="utf8", errors='replace') as fd:
         reader = csv.reader(fd)
@@ -59,10 +57,8 @@ def read_values(file_path):
                 torque_data = row
             elif idx == 20:
                 encoder_data = row
-            # Exit loop early if both rows are found
             if encoder_data and torque_data and len(encoder_data) == 10001 and len(torque_data) == 10001:
                 return encoder_data, torque_data
-            
 
 # Function to reverse list
 def reverse_list(lst):
@@ -70,7 +66,7 @@ def reverse_list(lst):
 
 # Function to calculate final torque with a given scaling factor
 def calculate_final_torque(torque_list, scaling_factor):
-    return [(float(torque) * scaling_factor) if torque else 0 for torque in torque_list]
+    return [((torque) * scaling_factor) if torque else 0 for torque in torque_list]
 
 # Function to convert list of strings to list of ints
 def convert_to_int_list(str_list):
@@ -105,6 +101,16 @@ def create_csv(torque_list, angle_list, output_file_path):
         for i, (torque, angle) in enumerate(zip(torque_list, angle_list), start=1):
             writer.writerow([1, 1, 1, i, 0, torque, 'n-m', angle, angle])
 
+def find_max_torque(torque_list):
+    max_val = torque_list[0]
+    for i in range (len(torque_list)):
+        if max_val <= torque_list[i] and torque_list[i] < 7000:
+            max_val = torque_list[i]
+        else:
+            continue
+        
+    return max_val
+
 # Function to nullify torque outliers (anything with a torque value over 7000 will be written as a 0)
 def nullify_torque_outliers(torque_list):
     nullified_values = 0
@@ -126,63 +132,73 @@ def process_file(file_path, output_file_path, scaling_factor):
     torque_array = torque_array[::2]
     torque_array.pop(0)
     encoder_array.pop(0)
-    # Filter out empty strings and convert to int lists
     encoder_array = convert_to_int_list(encoder_array) 
     torque_array = convert_to_int_list(torque_array)
     torque_array = nullify_torque_outliers(torque_array)#STEP 4
     encoder_array = calculate_compounded_angle(encoder_array)#STEP 5
     torque_array = calculate_final_torque(torque_array, scaling_factor) #STEP 6
     create_csv(torque_array, encoder_array, output_file_path) #STEP 7
+    print(f"Max value for this study is: {find_max_torque(torque_array)}")
+
+# Function to extract the parent directory of the input path
+def extract_parent_directory(input_path):
+    parent_directory = os.path.dirname(input_path)
+    return parent_directory
 
 # Main function for initialization
 def main():
-
-    print("*_______________________________________________*")
+    print("________________________________________________________________________________________________")
     base_input_dir = input("Enter the base input directory (e.g., C:\\Users\\user\\file\\Input_Torque_File): ").strip()
 
-    subdirectories = [d for d in os.listdir(base_input_dir) if os.path.isdir(os.path.join(base_input_dir, d))]
-    print("******************************")
-    print("Found Sub-Directories:")
-    for y in range(len(subdirectories)):
-        print(f"{y+1}. {subdirectories[y]}")
-    print("******************************")
-    print()
+    try:
+        subdirectories = [d for d in os.listdir(base_input_dir) if os.path.isdir(os.path.join(base_input_dir, d))]
+        print("******************************")
+        print("Found Sub-Directories:")
+        for y in range(len(subdirectories)):
+            print(f"{y+1}. {subdirectories[y]}")
+        print("******************************")
+        print()
+
+    except Exception as e:
+        print(f"No Sub Directories Found: {e}")
+        return
 
     scaling_factors_input = input("Enter Scaling factors for each station separated by commas in order from the subdirectory list above: ").split(',')
-
-    # Get all subdirectories in the base input directory
 
     if len(subdirectories) != len(scaling_factors_input):
         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         print("Error: The number of subdirectories must match the number of scaling factors")
-        print("1. Ensure the correct number of scaling factors have been inputted\n2. Delete any unescessary files in folder")
+        print("1. Ensure the correct number of scaling factors have been inputted\n2. Delete any unnecessary files located in the input files folder")
         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         print()
-
         return
+
+    parent_directory = extract_parent_directory(base_input_dir)
+
     for subdirectory, scaling_factor in zip(subdirectories, scaling_factors_input):
         scaling_factor = float(scaling_factor.strip())
         input_dir = os.path.join(base_input_dir, subdirectory)
-        output_dir = os.path.join(base_input_dir, f'New_{subdirectory}_Torque_Study')
-        os.makedirs(output_dir, exist_ok=True)
 
         try:
-            # Get all CSV files in the current subdirectory
-            csv_files = [f for f in os.listdir(input_dir) if f.endswith('.csv')]
+            output_dir = os.path.join(parent_directory, f'Output\ASG_Formatted_{subdirectory}_Torque_Study')
+            os.makedirs(output_dir, exist_ok=True)
 
-            if len(csv_files) < 30:
-                print(f"Error: Subdirectory {subdirectory} does not contain at least 30 CSV files.")
+            # Get all NWD files in the current subdirectory
+            nwd_files = [f for f in os.listdir(input_dir) if f.endswith('.nwd')]
+
+            if len(nwd_files) < 30:
+                print(f"Error: Subdirectory {subdirectory} does not contain at least 30 NWD files.")
                 continue
 
             # Process files after validation
             print()
-            print(f"Proscessing Folder...")
-            for i, input_file in enumerate(csv_files[:30]):
+            print(f"Processing Folder...")
+            for i, input_file in enumerate(nwd_files[:30]):
                 input_file_path = os.path.join(input_dir, input_file)
                 output_file_path = os.path.join(output_dir, f'{subdirectory}_TORQUE_CSV_{i + 1}.csv')
                 process_file(input_file_path, output_file_path, scaling_factor)
                 print(f'Processed {input_file_path} and saved to {output_file_path}')
-            print(f"File formating complete for subdirectory {subdirectory}")
+            print(f"File formatting complete for subdirectory {subdirectory}")
         except Exception as e:
             print(f"Error: {e}")
             print("There was an error with the file paths or processing. Please restart and enter the correct information.")
