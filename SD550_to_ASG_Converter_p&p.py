@@ -37,9 +37,10 @@
 #Project name: SD550 to ASG Format Conversion
 
 #Description: The purpose of this program is to take 
-#outputted data from a nitto seiko driver and to reformatit.
+#output data from a nitto seiko driver and to reformat it.
 #The original torque and encoder values are taken, transformed, recaluclated
-#using a predetermined conversion factor then formatted to me the ASG standard.
+#using a predetermined conversion factor based on each study then formatted to 
+# a similar ASG format standard.
 #-----------------------------------------------------------------------------
 #*****************************************************************************
 
