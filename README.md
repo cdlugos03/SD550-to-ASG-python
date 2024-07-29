@@ -6,7 +6,6 @@ compared to an ASG output as a CSV ![image](https://github.com/user-attachments/
 
 The majority of the file is made up of the Torque and Encoder data recorded throughout the test. The rest of the information above is negligble for the conversion. This program will only scan lines 18 & 21 (indexed at 17 & 20) which will both be converted to torque (n-m) and angle (deg) through the use of test conversion factors and encoder resolution. 
 
-The libraries used in this program are limited to csv and os which should both be acessible locally. 
 ## Program Details 
 This program can be broken down into 3 orders of operation: **User Input, Test Data Processing/Formating, and File Output** 
 Using CSV and OS libraries in python we are able to convert the NWD (output from SD550) to a readable CSV for our excel program to calculate prescribed limits. 
